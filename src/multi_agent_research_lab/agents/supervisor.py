@@ -1,11 +1,14 @@
 """Supervisor / router — orchestrator that decides which agent runs next."""
 
 import logging
+import time
 
 from multi_agent_research_lab.agents.base import BaseAgent, load_prompt
 from multi_agent_research_lab.core.config import get_settings
 from multi_agent_research_lab.core.schemas import PlanStep, RouteDecision
 from multi_agent_research_lab.core.state import ResearchState
+from multi_agent_research_lab.observability.logging import log_agent_event
+from multi_agent_research_lab.observability.tracing import trace_span
 from multi_agent_research_lab.services.llm_client import LLMClient
 
 log = logging.getLogger(__name__)
@@ -102,34 +105,43 @@ class SupervisorAgent(BaseAgent):
 
     def run(self, state: ResearchState) -> ResearchState:
         """Route to next agent using deterministic rules, LLM fallback for edge cases."""
+        started = time.perf_counter()
+        cost_usd = 0.0
 
-        # Try deterministic routing first (no LLM cost)
-        decision = self._deterministic_route(state)
+        with trace_span("supervisor", {"iteration": state.iteration}) as span:
+            # Try deterministic routing first (no LLM cost)
+            decision = self._deterministic_route(state)
 
-        if decision is None:
-            # Fallback: use LLM for ambiguous cases
-            try:
-                context = self._build_context(state)
-                result = self._llm.complete_json(self._system_prompt, context)
+            if decision is None:
+                # Fallback: use LLM for ambiguous cases
+                try:
+                    context = self._build_context(state)
+                    result = self._llm.complete_json(self._system_prompt, context)
 
-                meta = result.pop("_llm_response", {})
-                state.add_cost(
-                    meta.get("input_tokens", 0),
-                    meta.get("output_tokens", 0),
-                    meta.get("cost_usd", 0.0),
-                )
+                    meta = result.pop("_llm_response", {})
+                    cost_usd = meta.get("cost_usd", 0.0)
+                    state.add_cost(
+                        meta.get("input_tokens", 0),
+                        meta.get("output_tokens", 0),
+                        cost_usd,
+                    )
 
-                decision = RouteDecision(
-                    next_agent=result.get("next_agent", "done"),
-                    reason=result.get("reason", "LLM routing decision"),
-                    sub_queries=result.get("sub_queries"),
-                )
-            except Exception as e:
-                log.error(f"Supervisor LLM routing failed: {e}")
-                decision = RouteDecision(
-                    next_agent="done",
-                    reason=f"Routing failed: {e}",
-                )
+                    decision = RouteDecision(
+                        next_agent=result.get("next_agent", "done"),
+                        reason=result.get("reason", "LLM routing decision"),
+                        sub_queries=result.get("sub_queries"),
+                    )
+                except Exception as e:
+                    log.error(f"Supervisor LLM routing failed: {e}")
+                    decision = RouteDecision(
+                        next_agent="done",
+                        reason=f"Routing failed: {e}",
+                    )
+
+            span["next_agent"] = decision.next_agent
+            span["reason"] = decision.reason
+
+        elapsed_ms = (time.perf_counter() - started) * 1000
 
         # Log the decision
         state.planning_log.append(PlanStep(
@@ -142,9 +154,11 @@ class SupervisorAgent(BaseAgent):
             "next_agent": decision.next_agent,
             "reason": decision.reason,
             "iteration": state.iteration,
+            "duration_ms": elapsed_ms,
+            "cost_usd": cost_usd,
         })
 
-        log.info(f"Supervisor → {decision.next_agent}: {decision.reason}")
+        log_agent_event("supervisor", f"→ {decision.next_agent} ({decision.reason})", elapsed_ms, cost_usd)
 
         # Store sub_queries for researcher if provided
         if decision.sub_queries:

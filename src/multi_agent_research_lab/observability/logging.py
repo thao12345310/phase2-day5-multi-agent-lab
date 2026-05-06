@@ -32,6 +32,7 @@ AGENT_EMOJI = {
     "writer": "✍️ ",
     "critic": "⚖️ ",
     "baseline": "🤖",
+    "system": "⚙️ ",
 }
 
 console = Console(theme=AGENT_THEME)

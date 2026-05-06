@@ -66,7 +66,13 @@ class ResearchState(BaseModel):
         self.iteration += 1
 
     def add_trace_event(self, name: str, payload: dict[str, Any]) -> None:
-        self.trace.append({"name": name, "payload": payload})
+        import time
+        self.trace.append({
+            "name": name,
+            "timestamp": time.time(),
+            "iso_time": time.strftime("%H:%M:%S"),
+            "payload": payload,
+        })
 
     def add_cost(self, input_tokens: int, output_tokens: int, cost_usd: float) -> None:
         """Accumulate token usage and cost."""
