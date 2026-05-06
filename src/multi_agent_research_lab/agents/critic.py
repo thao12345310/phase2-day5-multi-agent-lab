@@ -20,7 +20,7 @@ class CriticAgent(BaseAgent):
     name = "critic"
 
     def __init__(self) -> None:
-        self._llm = LLMClient(model="gpt-4o-mini", temperature=0.1, max_tokens=1024)
+        self._llm = LLMClient(model="claude-haiku-4-5", temperature=0.1, max_tokens=1024)
         self._system_prompt = load_prompt("critic")
 
     def run(self, state: ResearchState) -> ResearchState:

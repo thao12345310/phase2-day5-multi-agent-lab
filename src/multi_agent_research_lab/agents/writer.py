@@ -20,7 +20,7 @@ class WriterAgent(BaseAgent):
     name = "writer"
 
     def __init__(self) -> None:
-        self._llm = LLMClient(model="gpt-4o-mini", temperature=0.4, max_tokens=2048)
+        self._llm = LLMClient(model="claude-haiku-4-5", temperature=0.4, max_tokens=2048)
         self._system_prompt = load_prompt("writer")
 
     def run(self, state: ResearchState) -> ResearchState:

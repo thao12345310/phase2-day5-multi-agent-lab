@@ -31,7 +31,7 @@ class JudgeResult:
         self.average = self.total / 4
 
 
-def judge_answer(query: str, answer: str, model: str = "gpt-4o-mini") -> JudgeResult:
+def judge_answer(query: str, answer: str, model: str = "claude-haiku-4-5") -> JudgeResult:
     """Evaluate a single answer using LLM-as-judge.
 
     Scores on 4 axes (1-5 each):
@@ -74,7 +74,7 @@ def judge_answer(query: str, answer: str, model: str = "gpt-4o-mini") -> JudgeRe
 
 
 def judge_comparison(
-    query: str, answer_a: str, answer_b: str, model: str = "gpt-4o-mini"
+    query: str, answer_a: str, answer_b: str, model: str = "claude-haiku-4-5"
 ) -> dict:
     """Pairwise comparison between two answers.
 
