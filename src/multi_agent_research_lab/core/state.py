@@ -1,13 +1,24 @@
 """Shared state for the multi-agent workflow.
 
-Students should extend this file when adding new agents, outputs, or evaluation metrics.
+Golden rule: agents only APPEND to state, never overwrite — helps trace and debug.
 """
 
 from typing import Any
 
 from pydantic import BaseModel, Field
 
-from multi_agent_research_lab.core.schemas import AgentResult, ResearchQuery, SourceDocument
+from multi_agent_research_lab.core.schemas import (
+    AgentResult,
+    AnalysisNote,
+    CriticNote,
+    ErrorInfo,
+    FallbackEvent,
+    FinalAnswer,
+    PlanStep,
+    ResearchNote,
+    ResearchQuery,
+    SourceDocument,
+)
 
 
 class ResearchState(BaseModel):
@@ -17,13 +28,37 @@ class ResearchState(BaseModel):
     iteration: int = 0
     route_history: list[str] = Field(default_factory=list)
 
-    sources: list[SourceDocument] = Field(default_factory=list)
-    research_notes: str | None = None
-    analysis_notes: str | None = None
-    final_answer: str | None = None
+    # Guardrail
+    guardrail_passed: bool = True
 
+    # Research data
+    sources: list[SourceDocument] = Field(default_factory=list)
+    research_notes: list[ResearchNote] = Field(default_factory=list)
+    research_loops: int = 0
+
+    # Analysis data
+    analysis_notes: list[AnalysisNote] = Field(default_factory=list)
+
+    # Writer output
+    final_answer: FinalAnswer | None = None
+
+    # Critic output (bonus)
+    critic_feedback: list[CriticNote] = Field(default_factory=list)
+    writer_revisions: int = 0
+
+    # Transparency & observability
+    planning_log: list[PlanStep] = Field(default_factory=list)
     agent_results: list[AgentResult] = Field(default_factory=list)
     trace: list[dict[str, Any]] = Field(default_factory=list)
+
+    # Cost tracking
+    total_cost_usd: float = 0.0
+    total_input_tokens: int = 0
+    total_output_tokens: int = 0
+
+    # Error handling
+    fallback_events: list[FallbackEvent] = Field(default_factory=list)
+    error: ErrorInfo | None = None
     errors: list[str] = Field(default_factory=list)
 
     def record_route(self, route: str) -> None:
@@ -32,3 +67,9 @@ class ResearchState(BaseModel):
 
     def add_trace_event(self, name: str, payload: dict[str, Any]) -> None:
         self.trace.append({"name": name, "payload": payload})
+
+    def add_cost(self, input_tokens: int, output_tokens: int, cost_usd: float) -> None:
+        """Accumulate token usage and cost."""
+        self.total_input_tokens += input_tokens
+        self.total_output_tokens += output_tokens
+        self.total_cost_usd += cost_usd

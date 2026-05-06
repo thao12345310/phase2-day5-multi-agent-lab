@@ -1,156 +1,173 @@
-# Lab 20: Multi-Agent Research System Starter
+# Multi-Agent Research Lab
 
-Starter repo cho bài lab **Multi-Agent Systems**: xây dựng hệ thống nghiên cứu gồm **Supervisor + Researcher + Analyst + Writer** và benchmark với single-agent baseline.
+> **Lab 20 — Production-grade multi-agent research system** comparing single-agent vs multi-agent workflows.
 
-> Mục tiêu của repo này là cung cấp **production-grade skeleton** để học viên phát triển code cá nhân. Các phần logic quan trọng được để ở dạng `TODO` để học viên tự triển khai.
+## Architecture Diagram
 
-## Learning outcomes
-
-Sau 2 giờ lab, học viên cần có thể:
-
-1. Thiết kế role rõ ràng cho nhiều agent.
-2. Xây dựng shared state đủ thông tin cho handoff.
-3. Thêm guardrail tối thiểu: max iterations, timeout, retry/fallback, validation.
-4. Trace được luồng chạy và giải thích agent nào làm gì.
-5. Benchmark single-agent vs multi-agent theo quality, latency, cost.
-
-## Architecture mục tiêu
-
-```text
-User Query
-   |
-   v
-Supervisor / Router
-   |------> Researcher Agent  -> research_notes
-   |------> Analyst Agent     -> analysis_notes
-   |------> Writer Agent      -> final_answer
-   |
-   v
-Trace + Benchmark Report
+```mermaid
+graph TD
+    Q[User Query] --> G[🛡️ Guardrail]
+    G -->|safe| S[🧭 Supervisor]
+    G -->|blocked| E[❌ Error Response]
+    
+    S -->|"needs research"| R[🔍 Researcher]
+    S -->|"needs analysis"| A[📊 Analyst]
+    S -->|"ready to write"| W[✍️ Writer]
+    S -->|"review draft"| C[⚖️ Critic]
+    S -->|"done"| F[✅ Final Answer]
+    
+    R -->|sources + notes| S
+    A -->|claims + gaps| S
+    A -->|"gaps found"| S
+    W -->|draft| S
+    C -->|"score < 7"| S
+    C -->|"score >= 7"| S
+    
+    subgraph "Search Fallback Chain"
+        T[Tavily API] --> M[Mock Corpus]
+        M --> L[LLM Knowledge]
+    end
+    
+    R --> T
 ```
 
-## Cấu trúc repo
+## Fallback Strategy ⚠️
 
-```text
-.
-├── src/multi_agent_research_lab/
-│   ├── agents/              # Agent interfaces + skeletons
-│   ├── core/                # Config, state, schemas, errors
-│   ├── graph/               # LangGraph workflow skeleton
-│   ├── services/            # LLM, search, storage clients
-│   ├── evaluation/          # Benchmark/evaluation skeleton
-│   ├── observability/       # Logging/tracing hooks
-│   └── cli.py               # CLI entrypoint
-├── configs/                 # YAML configs for lab variants
-├── docs/                    # Lab guide, rubric, design notes
-├── tests/                   # Unit tests for skeleton behavior
-├── notebooks/               # Optional notebook entrypoint
-├── scripts/                 # Helper scripts
-├── .env.example             # Environment variables template
-├── pyproject.toml           # Python project config
-├── Dockerfile               # Containerized dev/runtime
-└── Makefile                 # Common commands
-```
+### LLM Fallback
+- **Primary**: OpenAI (gpt-4o-mini) for all agents
+- **Retry**: 3 attempts with exponential backoff (1s → 2s → 4s)
+- **Timeout**: 30s per call, 120s end-to-end workflow
+- **Friendly error**: If all retries fail, state.error is set and workflow terminates gracefully
+
+### Search Fallback (3-tier)
+1. **Tavily API** — real-time web search (if `TAVILY_API_KEY` set)
+2. **Mock data** — keyword matching against `graphrag_corpus.json` (12 curated docs)
+3. **Direct LLM** — training knowledge with `[unverified]` markers
+
+## Guardrails
+- **Pre-filter classifier**: safe / sensitive / out_of_scope / policy_violation
+- **Max iterations**: 8 (configurable in `configs/lab_default.yaml`)
+- **Max research loops**: 2
+- **Cost cap**: $0.50 per run
+- **Timeout**: 120s end-to-end
+
+## Agent Responsibilities
+
+| Agent | Model | Role |
+|-------|-------|------|
+| Guardrail | gpt-4o-mini | Input classification (1 call) |
+| Supervisor | gpt-4o-mini | Routing decisions (deterministic rules + LLM fallback) |
+| Researcher | gpt-4o-mini | Query decomposition + search + note synthesis |
+| Analyst | gpt-4o-mini | Claim extraction + gap analysis + confidence scoring |
+| Writer | gpt-4o-mini | Final answer with citations |
+| Critic (bonus) | gpt-4o-mini | 4-axis quality review + revision request |
 
 ## Quickstart
 
-### 1. Tạo môi trường
-
 ```bash
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\\Scripts\\activate
-pip install -e "[dev]"
-cp .env.example .env
+# Setup
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev,llm]"
+cp .env.example .env    # add your OPENAI_API_KEY
+
+# Test
+pytest tests/ -v
+
+# Run
+python -m multi_agent_research_lab.cli routes              # show endpoints
+python -m multi_agent_research_lab.cli baseline -q "What is GraphRAG?"
+python -m multi_agent_research_lab.cli multi-agent -q "Compare GraphRAG vs RAG" --critic
+python -m multi_agent_research_lab.cli benchmark           # run full benchmark
+python -m multi_agent_research_lab.cli serve               # start FastAPI server
 ```
 
-### 2. Cấu hình API keys
+## API Endpoints
 
-Mở `.env` và điền key cần thiết.
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/run/baseline` | Run single-agent baseline |
+| POST | `/run/multi-agent` | Run multi-agent workflow |
+| POST | `/benchmark/run` | Run benchmark comparison |
+| GET | `/benchmark/{id}` | Get benchmark results |
+| GET | `/trace/{run_id}` | Get run trace/planning log |
+| GET | `/health` | Liveness check |
+| GET | `/docs` | Swagger UI |
+
+## Extra Features (Bonus)
+
+- [x] Guardrail agent with classification pre-filter
+- [x] Critic agent with 4-axis rubric + revision loop
+- [x] LLM-as-judge benchmark automation
+- [x] FastAPI + CLI dual interface
+- [x] Cost tracking + VND conversion
+- [x] Mock search fallback chain (3-tier)
+- [x] Cross-provider LLM retry with exponential backoff
+- [x] Rich console logging with agent-level color coding
+- [x] Planning log persistence (JSONL)
+- [x] Structured routing with deterministic rules (saves LLM cost)
+- [x] Self-correction loop (Analyst → Researcher gap-filling)
+
+## Demo Flow
 
 ```bash
-OPENAI_API_KEY=...
-# optional
-LANGSMITH_API_KEY=...
-TAVILY_API_KEY=...
-```
+# 1. Show routes
+python -m multi_agent_research_lab.cli routes
 
-### 3. Chạy smoke test
+# 2. Single-agent baseline
+python -m multi_agent_research_lab.cli baseline -q "Who founded Anthropic?"
 
-```bash
-make test
-python -m multi_agent_research_lab.cli --help
-```
-
-### 4. Chạy baseline skeleton
-
-```bash
-python -m multi_agent_research_lab.cli baseline \
-  --query "Research GraphRAG state-of-the-art and write a 500-word summary"
-```
-
-Lệnh này chỉ chạy khung baseline tối giản. Học viên cần tự triển khai logic LLM thực tế trong `src/multi_agent_research_lab/services/llm_client.py`.
-
-### 5. Chạy multi-agent skeleton
-
-```bash
+# 3. Multi-agent with critic + self-correction loop
 python -m multi_agent_research_lab.cli multi-agent \
-  --query "Research GraphRAG state-of-the-art and write a 500-word summary"
+  -q "Research GraphRAG state-of-the-art, compare with traditional RAG, 500 words" \
+  --critic
+
+# 4. Full benchmark
+python -m multi_agent_research_lab.cli benchmark
+
+# 5. API demo
+python -m multi_agent_research_lab.cli serve  # terminal 1
+curl -X POST http://localhost:8000/run/baseline \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What is GraphRAG?"}'
 ```
 
-Mặc định lệnh sẽ báo các `TODO` cần làm. Đây là chủ đích của starter repo.
+## Project Structure
 
-## Milestones trong 2 giờ lab
-
-| Thời lượng | Milestone | File gợi ý |
-|---:|---|---|
-| 0-15' | Setup, chạy baseline skeleton | `cli.py`, `services/llm_client.py` |
-| 15-45' | Build Supervisor / router | `agents/supervisor.py`, `graph/workflow.py` |
-| 45-75' | Thêm Researcher, Analyst, Writer | `agents/*.py`, `core/state.py` |
-| 75-95' | Trace + benchmark single vs multi | `observability/tracing.py`, `evaluation/benchmark.py` |
-| 95-115' | Peer review theo rubric | `docs/peer_review_rubric.md` |
-| 115-120' | Exit ticket | `docs/lab_guide.md` |
-
-## Quy ước production trong repo
-
-- Tách rõ `agents`, `services`, `core`, `graph`, `evaluation`, `observability`.
-- Không hard-code API key trong code.
-- Tất cả input/output chính dùng Pydantic schema.
-- Có type hints, linting, formatting, unit test tối thiểu.
-- Có logging/tracing hook ngay từ đầu.
-- Không để agent chạy vô hạn: dùng `max_iterations`, `timeout_seconds`.
-- Có benchmark report thay vì chỉ demo output đẹp.
-
-## TODO chính cho học viên
-
-Tìm trong code các marker:
-
-```bash
-grep -R "TODO(student)" -n src tests docs
+```text
+src/multi_agent_research_lab/
+├── agents/               # Agent implementations
+│   ├── prompts/          # Markdown prompt templates (A/B testable)
+│   ├── base.py           # BaseAgent + prompt loader
+│   ├── guardrail.py      # Input safety filter
+│   ├── supervisor.py     # Orchestrator with deterministic routing
+│   ├── researcher.py     # Search + synthesis
+│   ├── analyst.py        # Claim extraction + gap analysis
+│   ├── writer.py         # Final answer generation
+│   └── critic.py         # Quality review (bonus)
+├── core/                 # Shared types and config
+│   ├── config.py         # Pydantic Settings from .env
+│   ├── state.py          # ResearchState (single source of truth)
+│   ├── schemas.py        # All Pydantic models
+│   ├── errors.py         # Domain errors
+│   └── pricing.py        # Token cost calculator
+├── graph/                # Workflow orchestration
+│   ├── workflow.py       # Multi-agent workflow
+│   └── baseline.py       # Single-agent baseline
+├── services/             # External service clients
+│   ├── llm_client.py     # OpenAI with retry + fallback
+│   ├── search_client.py  # 3-tier search fallback
+│   ├── storage.py        # Local artifact storage
+│   ├── mock_data/        # Curated research corpus
+│   └── api/              # FastAPI application
+├── evaluation/           # Benchmark + quality metrics
+│   ├── benchmark.py      # Benchmark runner
+│   ├── judge.py          # LLM-as-judge (bonus)
+│   ├── metrics.py        # 5 mandatory metrics
+│   ├── queries.yaml      # 3-tier query sets
+│   └── report.py         # Markdown report generator
+├── observability/        # Logging + tracing
+│   ├── logging.py        # Rich console with agent colors
+│   ├── tracing.py        # Span context manager
+│   └── planning_log.py   # JSONL persistence
+└── cli.py                # Typer CLI entrypoint
 ```
-
-Các phần học viên cần tự làm:
-
-1. Implement LLM client.
-2. Implement web/search client hoặc mock search source.
-3. Implement routing decision trong Supervisor.
-4. Implement từng worker agent.
-5. Build LangGraph workflow.
-6. Thêm tracing provider thật: LangSmith, Langfuse hoặc OpenTelemetry.
-7. Viết benchmark report.
-
-## Deliverables
-
-Học viên nộp:
-
-1. GitHub repo cá nhân.
-2. Screenshot trace hoặc link trace.
-3. `reports/benchmark_report.md` so sánh single vs multi-agent.
-4. Một đoạn giải thích failure mode và cách fix.
-
-## References
-
-- Anthropic: Building effective agents — https://www.anthropic.com/engineering/building-effective-agents
-- OpenAI Agents SDK orchestration/handoffs — https://developers.openai.com/api/docs/guides/agents/orchestration
-- LangGraph concepts — https://langchain-ai.github.io/langgraph/concepts/
-- LangSmith tracing — https://docs.smith.langchain.com/
-- Langfuse tracing — https://langfuse.com/docs

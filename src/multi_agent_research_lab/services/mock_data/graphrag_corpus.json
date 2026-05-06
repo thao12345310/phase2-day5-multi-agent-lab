@@ -1,0 +1,74 @@
+[
+  {
+    "title": "GraphRAG: Graph-Based Retrieval-Augmented Generation",
+    "snippet": "GraphRAG extends traditional RAG by constructing a knowledge graph from source documents, enabling multi-hop reasoning across entities and relationships. Unlike flat vector retrieval, GraphRAG can answer questions requiring synthesis across multiple document chunks by traversing graph edges.",
+    "url": "https://arxiv.org/abs/2404.16130",
+    "published_date": "2024-04-24"
+  },
+  {
+    "title": "From Local to Global: A Graph RAG Approach to Query-Focused Summarization",
+    "snippet": "Microsoft Research introduced a two-phase approach: first building a hierarchical community structure from source text using LLM-extracted entities, then using these communities to answer global queries that span the entire corpus. This contrasts with naive RAG which can only retrieve locally relevant chunks.",
+    "url": "https://arxiv.org/abs/2404.16130",
+    "published_date": "2024-04-01"
+  },
+  {
+    "title": "Knowledge Graph Construction for RAG Pipelines",
+    "snippet": "The triple extraction phase uses LLMs to identify (subject, predicate, object) triples from text chunks. Popular approaches include few-shot prompting with GPT-4 for entity/relation extraction, followed by entity resolution to merge duplicate nodes. Quality of extraction directly impacts downstream retrieval accuracy.",
+    "url": "https://neo4j.com/developer-blog/knowledge-graph-rag/",
+    "published_date": "2024-06-15"
+  },
+  {
+    "title": "Benchmarking RAG vs GraphRAG: When Graph Structure Helps",
+    "snippet": "Empirical studies show GraphRAG outperforms flat RAG on multi-hop questions requiring 2-3 reasoning steps. However, for simple factual lookups, traditional vector RAG achieves similar quality at lower latency and cost. The sweet spot for GraphRAG is complex analytical queries over interconnected domains.",
+    "url": "https://arxiv.org/abs/2407.04300",
+    "published_date": "2024-07-05"
+  },
+  {
+    "title": "Multi-Agent Systems in AI Research",
+    "snippet": "Multi-agent architectures decompose complex tasks into specialized sub-tasks handled by different agents. A supervisor/orchestrator pattern routes work between researchers, analysts, and writers. This approach leverages the principle of cognitive specialization — each agent optimized for a narrow responsibility.",
+    "url": "https://www.anthropic.com/research/building-effective-agents",
+    "published_date": "2024-12-20"
+  },
+  {
+    "title": "Building Effective Agents: Anthropic's Design Principles",
+    "snippet": "Anthropic recommends starting with the simplest solution (augmented LLM with tools) and only adding complexity when measurably justified. Key principles include: maintain agent-computer interface (ACI) quality, use structured outputs for reliability, implement guardrails for safety, and log every decision for transparency.",
+    "url": "https://docs.anthropic.com/en/docs/agents",
+    "published_date": "2025-01-15"
+  },
+  {
+    "title": "LLM Agent Guardrails and Safety Patterns",
+    "snippet": "Production LLM agents require multiple safety layers: input classification (detecting harmful/out-of-scope queries), output validation (checking for hallucination and policy violations), cost caps (preventing runaway token usage), and iteration limits (stopping infinite loops). A pre-filter classifier using a cheap model like Haiku can screen queries at minimal cost.",
+    "url": "https://cookbook.openai.com/examples/how_to_build_guardrails",
+    "published_date": "2024-09-10"
+  },
+  {
+    "title": "LangGraph: Building Stateful Multi-Agent Applications",
+    "snippet": "LangGraph provides a framework for building stateful, multi-actor applications with LLMs. It models workflows as directed graphs where nodes are agent functions and edges define routing logic. Key features include conditional branching, state persistence, and human-in-the-loop capabilities.",
+    "url": "https://langchain-ai.github.io/langgraph/",
+    "published_date": "2024-08-01"
+  },
+  {
+    "title": "Cost Optimization Strategies for LLM Pipelines",
+    "snippet": "Five strategies for reducing LLM pipeline costs: 1) Use smaller models (GPT-4o-mini, Haiku) for routine tasks, 2) Cache repeated prompts, 3) Implement token budgets per call, 4) Use structured outputs to reduce parsing overhead, 5) Batch similar requests. A well-designed multi-agent system can use model rẻ nhất while maintaining quality through architectural patterns like self-correction loops.",
+    "url": "https://platform.openai.com/docs/guides/cost-optimization",
+    "published_date": "2025-02-01"
+  },
+  {
+    "title": "Self-Correction Loops in Agentic AI Systems",
+    "snippet": "Self-correction is a key advantage of multi-agent systems: an analyst identifies gaps in research, triggers additional search, and the writer revises based on critic feedback. Studies show that 1-2 correction loops improve output quality by 15-30% on rubric-based evaluation, while more loops yield diminishing returns.",
+    "url": "https://arxiv.org/abs/2310.01798",
+    "published_date": "2024-03-15"
+  },
+  {
+    "title": "Comparing Single-Agent vs Multi-Agent Architectures",
+    "snippet": "Single-agent architectures excel at simple, well-defined tasks with clear ground truth (factual Q&A, code generation, structured extraction). Multi-agent architectures shine when tasks require diverse skills (research + analysis + writing), iterative refinement, and quality cannot be verified automatically. The overhead of coordination (2-4x cost, 2-3x latency) must be justified by measurable quality gains.",
+    "url": "https://blog.langchain.dev/multi-agent-systems/",
+    "published_date": "2024-11-20"
+  },
+  {
+    "title": "Structured Output Patterns for Reliable LLM Applications",
+    "snippet": "Using structured outputs (JSON mode, function calling, tool use) dramatically reduces parsing errors in production LLM applications. OpenAI's response_format parameter and Anthropic's tool-use API provide schema-validated outputs. This eliminates regex parsing and reduces hallucination in format-sensitive applications.",
+    "url": "https://platform.openai.com/docs/guides/structured-outputs",
+    "published_date": "2024-10-01"
+  }
+]

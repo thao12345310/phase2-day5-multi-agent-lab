@@ -1,9 +1,15 @@
 lab:
   name: multi-agent-research-lab
-  max_iterations: 6
-  timeout_seconds: 60
+  max_iterations: 8
+  timeout_seconds: 120
+  max_research_loops: 2
+  max_total_tokens: 50000
+  cost_cap_usd: 0.50
 
 agents:
+  guardrail:
+    model: gpt-4o-mini
+    temperature: 0.0
   supervisor:
     model: gpt-4o-mini
     temperature: 0.0
@@ -16,9 +22,40 @@ agents:
   writer:
     model: gpt-4o-mini
     temperature: 0.4
+  critic:
+    model: gpt-4o-mini
+    temperature: 0.1
+  baseline:
+    model: gpt-4o-mini
+    temperature: 0.3
 
 benchmark:
+  repeats: 3
   queries:
-    - "Research GraphRAG state-of-the-art and write a 500-word summary"
-    - "Compare single-agent and multi-agent workflows for customer support"
-    - "Summarize production guardrails for LLM agents"
+    # Tier 1: Simple factual
+    - "Who founded Anthropic and what is their mission?"
+    - "What is GraphRAG and how does it differ from traditional RAG?"
+    - "What is LangGraph and what are its key features?"
+    # Tier 2: Multi-source synthesis
+    - "Compare GraphRAG vs traditional RAG approaches, including pros and cons, in 500 words"
+    - "Compare single-agent and multi-agent workflows for research tasks"
+    - "Summarize production guardrails and safety patterns for LLM agents"
+    # Tier 3: Iterative research
+    - "Research the state-of-the-art in agentic AI frameworks, identify gaps, and suggest future directions"
+    - "Analyze cost optimization strategies for multi-agent LLM pipelines and provide recommendations"
+    - "Research self-correction loops in AI systems and evaluate their effectiveness with evidence"
+
+pricing:
+  usd_per_1m_tokens:
+    gpt-4o-mini:
+      input: 0.15
+      output: 0.60
+    gpt-4o:
+      input: 2.50
+      output: 10.00
+    claude-haiku-4-5:
+      input: 0.80
+      output: 4.00
+    claude-sonnet-4-6:
+      input: 3.00
+      output: 15.00

@@ -1,0 +1,31 @@
+# Benchmark query sets organized by tier
+# Per lab_plan.md: 3-5 queries/tier × 2-3 modes × 3 repeats ≈ 60 runs
+
+tiers:
+  simple_factual:
+    description: "Single-agent should win (latency, cost)"
+    queries:
+      - "Who founded Anthropic and what is their mission?"
+      - "What is GraphRAG and how does it differ from traditional RAG?"
+      - "What is LangGraph and what are its key features?"
+
+  multi_source_synthesis:
+    description: "Multi-agent should win (quality)"
+    queries:
+      - "Compare GraphRAG vs traditional RAG approaches, including pros and cons, in 500 words"
+      - "Compare single-agent and multi-agent workflows for research tasks"
+      - "Summarize production guardrails and safety patterns for LLM agents"
+
+  iterative_research:
+    description: "Multi-agent should win significantly"
+    queries:
+      - "Research the state-of-the-art in agentic AI frameworks, identify gaps, and suggest future directions"
+      - "Analyze cost optimization strategies for multi-agent LLM pipelines and provide recommendations"
+      - "Research self-correction loops in AI systems and evaluate their effectiveness with evidence"
+
+modes:
+  - baseline
+  - multi-agent
+  - multi-agent+critic
+
+repeats: 3
